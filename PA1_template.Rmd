@@ -1,20 +1,202 @@
-# Reproducible Research: Peer Assessment 1
+---
+output: html_document
+---
+Reproducible Research: Project 1
+========================
+
+What is the mean total number of steps taken per day?
+ 
+```{r}
+library(ggplot2)   
+library(scales)   
+library(gridExtra) 
+```{r}
+
+```{r}
+data <- read.csv(file="activity.csv")
+str(data)
+```{r}
+
+```{r}
+data$date <- as.Date(data$date)
+summary(data)
+```{r}
+
+```{r}
+steps.per.day <- as.data.frame(rowsum(data$steps, data$date))
+steps.per.day$date <- as.Date(rownames(steps.per.day))
+rownames(steps.per.day) <- NULL
+colnames(steps.per.day) <- c("steps", "date")
+```{r}
+
+##What is the mean total of steps taken per day?
+
+```{r}
+mean(steps.per.day$steps, na.rm=TRUE)
+```{r}
+
+##What is the median total number of steps taken per day
+
+```{r}
+median(steps.per.day$steps, na.rm=TRUE)
+```{r}
+
+##Make a histogram of the total number of stpes taken each day.
+
+```{r}
+
+```{r}
+
+Histogram1 <- ggplot(steps.per.day, aes(x=date, y=steps)) + 
+            geom_histogram(stat="identity", 
+                           binwidth=nrow(steps.per.day), 
+                           position="identity",
+                           aes(fill=steps,)) +
+            scale_fill_gradient("Steps", low = "red", high = "green") +
+            scale_x_date(labels = date_format("%Y-%m-%d"),
+                         breaks = seq(min(steps.per.day$date), 
+                                      max(steps.per.day$date), 
+                                      length=ceiling(nrow(steps.per.day)/2)),
+                         limits = c(min(steps.per.day$date), 
+                                    max(steps.per.day$date))) +
+            labs(title = "Activity Monitoring") +
+            labs(x = "Date", y = "Number of steps") +
+            theme_bw() + 
+            theme(axis.text.x = element_text(angle = 90, hjust = 1))
+Histogram1
+```{r}
+
+##Make a time series plot (i.e. type = “l”) of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all days (y-axis).
+
+```{r}
+time.series.plot <- data.frame(steps=data$steps,
+                             interval=data$interval)
+time.series.plot$interval <- as.factor(time.series.plot$interval)
+
+time.series.plot<- aggregate(steps ~ interval, time.series.plot, mean)
+time.series.plot$interval <- as.numeric(levels(time.series.plot$interval))[time.series.plot$interval]
+maxID <- which.max(time.series.plot$steps)
+
+Histogram2 <- ggplot(time.series.plot, aes(x=interval, y=steps)) + 
+            geom_line() +
+            geom_smooth(method="loess") +
+            geom_text(data=time.series.plot[maxID, ], 
+                      label=sprintf("(%i, %.2f)", 
+                                    time.series.plot[maxID,]$interval, 
+                                    time.series.plot[maxID,]$steps),
+                      size=3.4, 
+                      vjust=-1,) +
+            scale_y_continuous(limits = c(-5, 250)) +
+            labs(title = "Average Daily Activity Pattern") +
+            labs(x = "5-minute interval", 
+                 y = "Number of steps") +
+            theme_bw()
+Histogram2
+```{r}
+
+##Which of the 5-minute interval, on average across all the days in the dataset, contains the maximum number of steps??
+
+```{r}
+time.series.plot[maxID,]
+```{r}
+
+##What is the total number of missing values in the dataset (i.e. the total number of rows with NAs)?
+
+```{r}
+selectNA <- !complete.cases(data$steps)
+selectZero <- data$steps == 0 
+print(sprintf("Total number of missing values in the dataset: %i", sum(selectNA)))
+
+##What could be a strategy for filling in all of the missing values in the dataset? We you could use mean of the number of steps.
+
+```{r}
+dataImputed <- data
+estimator <- mean(dataImputed$steps, na.rm=TRUE)
+dataImputed$steps[selectNA] <- estimator
+```{r}
+
+```{r}
+steps.per.dayImputed <- as.data.frame(rowsum(dataImputed$steps, dataImputed$date))
+steps.per.dayImputed$date <- as.Date(rownames(steps.per.dayImputed))
+rownames(steps.per.dayImputed) <- NULL
+colnames(steps.per.dayImputed) <- c("steps", "date")
+
+Histogram3 <- ggplot(steps.per.dayImputed, aes(x=date, y=steps)) + 
+            geom_histogram(stat="identity", 
+                           binwidth=nrow(steps.per.dayImputed), 
+                           position="identity",
+                           aes(fill=steps,)) +
+            scale_fill_gradient("Steps", low = "red", high = "green") +
+            scale_x_date(labels = date_format("%Y-%m-%d"),
+                         breaks = seq(min(steps.per.dayImputed$date), 
+                                      max(steps.per.dayImputed$date), 
+                                      length=ceiling(nrow(steps.per.dayImputed)/2)),
+                         limits = c(min(steps.per.dayImputed$date), 
+                                    max(steps.per.dayImputed$date))) +
+            labs(title = "Activity Monitoring\n(Imputed on Original Data)") +
+            labs(x = "Date", y = "Number of steps") +
+            theme_bw() + 
+            theme(axis.text.x = element_text(angle = 90, hjust = 1))
+Histogram3
+```{r}
+
+##What then are new datasets equal to the original dataset but with the missing data filled in?
+```{r}
+unique(dataImputed$date[selectNA])
+```{r}
+
+```{r}
+summary(steps.per.day)
+summary(steps.per.dayImputed)
+```{r}
+
+##Make a histogram of the total number of steps taken each day and Calculate and report the mean and median total number of steps taken per day. Do these values differ from the estimates from the first part of the assignment? What is the impact of imputing missing data on the estimates of the total daily number of steps?
+
+```{r}
+Histogram4 <- ggplot() +  
+            geom_density(data=steps.per.day, aes(x=steps, 
+                                               y=..density..,
+                                               color="original"),
+                         na.rm=TRUE) +
+            geom_density(data=steps.per.dayImputed, aes(x=steps,
+                                                      y=..density..,
+                                                      color="imputed")) +
+            scale_color_discrete(name ="Data", labels=c("imputed", "original")) +
+            labs(x="Number of steps", y="Density") + 
+            labs(title="Steps taken per day") +
+            theme_bw()
+Histogram4
+
+##Notice from the histogram that the imputed values are noticeably higher than the original values. However, the illustrated high values of the mentioned imputed data are relatively not significantly high compared to the original data as the density is at one hundred thousandths place, which provides a low impact. This has been a result of using the mean values to replace the missing values of our data set.
+
+```{r}
+
+##Are there differences in activity patterns between weekdays and weekends?
+
+```{r}
+time.series.dataImputed <- dataImputed
+time.series.dataImputed$interval <- as.factor(time.series.dataImputed$interval)
+day <- !weekdays(time.series.dataImputed$date) %in% c("Saturday", "Sunday")
+day[day == TRUE] <- "weekday"
+day[day == FALSE] <- "weekend"
+day <- as.factor(day)
+
+time.series.dataImputed$day <- day
+time.series.dataImputed <- aggregate(steps ~ interval + day, time.series.dataImputed, mean)
+time.series.dataImputed$interval <- as.numeric(levels(time.series.dataImputed$interval))[time.series.dataImputed$interval]
+Histogram5 <- ggplot(time.series.dataImputed, aes(interval, steps)) + 
+        geom_line() +
+        facet_grid(day ~ .) +
+        labs(x="5-minute interval", 
+             y="Number of steps") + 
+        theme_bw()
+Histogram5
+```{r}
 
 
-## Loading and preprocessing the data
+## Weekends seem to be of higher intensity compared to weekdays. 
+
+```
 
 
 
-## What is mean total number of steps taken per day?
-
-
-
-## What is the average daily activity pattern?
-
-
-
-## Imputing missing values
-
-
-
-## Are there differences in activity patterns between weekdays and weekends?
